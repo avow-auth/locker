@@ -1,7 +1,7 @@
 {
   "name": "@avow/locker",
   "version": "1.0.0",
-  "description": "",
+  "description": "Distributed lock library using DynamoDB as data store.",
   "main": "lib/index.js",
   "types": "lib/index.ts.d",
   "scripts": {
