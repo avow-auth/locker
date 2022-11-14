@@ -8,7 +8,7 @@
     "esModuleInterop": true,
     "moduleResolution": "node",
     "module": "CommonJS",
-    "outFile": "lib/index.js",
+    "outDir": "lib",
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "removeComments": true,
@@ -20,3 +20,4 @@
     ".vscode/**/*"
   ]
 }
+

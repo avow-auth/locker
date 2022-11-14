@@ -3,7 +3,9 @@
   "version": "1.0.2",
   "description": "Distributed lock library using DynamoDB as data store.",
   "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "files": [
+    "lib/**/*"
+  ],
   "scripts": {
     "build": "rimraf lib && node ./esbuild.js && npm run ts-types",
     "ts-types": " tsc --emitDeclarationOnly --outDir lib",
