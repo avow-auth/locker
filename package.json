@@ -2,8 +2,8 @@
   "name": "@avow/locker",
   "version": "1.0.1",
   "description": "Distributed lock library using DynamoDB as data store.",
-  "main": "./lib/index.js",
-  "types": "./lib/index.d.ts",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "scripts": {
     "build": "rimraf lib && node ./esbuild.js && npm run ts-types",
     "ts-types": " tsc --emitDeclarationOnly --outDir lib",
