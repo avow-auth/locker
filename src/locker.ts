@@ -1,10 +1,10 @@
-import { DynamoDB, DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { nanoid } from "nanoid";
 import { Lock, LockOptions } from "./lock";
 
 export type LockerOptions = {
-  ddbClient?: DynamoDBClient | DynamoDB;
+  ddbClient?: DynamoDBClient;
   tableName: string;
   partitionKeyPrefix?: string;
   partitionKey: string;
