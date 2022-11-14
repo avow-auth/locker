@@ -1,0 +1,37 @@
+{
+  "preset": "@shelf/jest-dynamodb",
+  "setupFiles": [
+    "esbuild-register",
+    "jest-extended"
+  ],
+  "setupFilesAfterEnv": [
+    "jest-extended/all"
+  ],
+  "moduleFileExtensions": [
+    "js",
+    "json",
+    "ts"
+  ],
+  "moduleDirectories": [
+    "node_modules",
+    "src"
+  ],
+  "moduleNameMapper": {},
+  "rootDir": "src/",
+  "testRegex": ".*\\.spec\\.ts$",
+  "transformIgnorePatterns": [],
+  "transform": {
+    "^.+\\.tsx?$": [
+      "ts-jest",
+      {
+      }
+    ]
+  },
+  "collectCoverageFrom": [
+    "**/*.(t|j)s"
+  ],
+  "coverageDirectory": "../coverage",
+  "testEnvironment": "node",
+  "testTimeout": 20000,
+  "clearMocks": true
+}
