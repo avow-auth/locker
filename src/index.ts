@@ -1,4 +1,4 @@
 export * from "./errors";
-export { Lock, LockOptions } from "./lock";
+export { Lease, LeaseOptions } from "./lease";
 export { Locker, LockerOptions } from "./locker";
 

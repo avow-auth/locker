@@ -1,7 +1,7 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { nanoid } from "nanoid";
-import { Lock, LockOptions } from "./lock";
+import { Lease, LeaseOptions } from "./lease";
 
 export type LockerOptions = {
   ddbClient?: DynamoDBClient;
@@ -52,29 +52,29 @@ export class Locker {
    * 
    * @param leaseId 
    * @param options
-   * @throws LockNotGrantedError 
+   * @throws LeaseNotGrantedError 
    */
-  async acquire(leaseId: string, options: LockOptions): Promise<Lock> {
-    const lock = new Lock(leaseId, { ...options, locker: this });
-    await lock.acquire();
-    return lock;
+  async acquire(leaseId: string, options: LeaseOptions): Promise<Lease> {
+    const lease = new Lease(leaseId, { ...options, locker: this });
+    await lease.acquire();
+    return lease;
   }
 
-  async withLock<R>(leaseId: string, options: LockOptions, callback: (lock: Lock) => Promise<R>) {
-    const lock = await this.acquire(leaseId, options);
+  async withLease<R>(leaseId: string, options: LeaseOptions, callback: (lease: Lease) => Promise<R>) {
+    const lease = await this.acquire(leaseId, options);
     try {
-      return await callback(lock);
+      return await callback(lease);
     } finally {
-      await lock.release();
+      await lease.release();
     }
   }
 
-  async withLocks<R>(leaseIds: string[], options: LockOptions, callback: (locks: Lock[]) => Promise<R>) {
-    const locks = await Promise.all(leaseIds.map(leaseId => this.acquire(leaseId, options)));
+  async withLeases<R>(leaseIds: string[], options: LeaseOptions, callback: (leases: Lease[]) => Promise<R>) {
+    const leases = await Promise.all(leaseIds.map(leaseId => this.acquire(leaseId, options)));
     try {
-      return await callback(locks);
+      return await callback(leases);
     } finally {
-      await Promise.all(locks.map(lock => lock.release()));
+      await Promise.all(leases.map(lease => lease.release()));
     }
   }
 }

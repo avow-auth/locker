@@ -3,31 +3,31 @@ import { DeleteCommand, GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb"
 import Debug from "debug";
 import { nanoid } from "nanoid";
 import { setTimeout as delay } from "timers/promises";
-import { LockNotGrantedError } from "./errors";
+import { LeaseNotGrantedError } from "./errors";
 import { Locker } from "./locker";
 
-const debug = Debug("locker:lock");
+const debug = Debug("locker:lease");
 
 export const DEFAULT_RETRY_COUNT = 5;
 
-export type LockOptions = {
+export type LeaseOptions = {
   leaseDurationMs: number;
   heartbeatMs?: number;
   maxRetryCount?: number;
 }
 
-export type LockOptionsWithLocker = LockOptions & {
+export type LeaseOptionsWithLocker = LeaseOptions & {
   locker: Locker;
 }
 
-export type LockItem = {
+export type LeaseItem = {
   leaseId: string;
   ownerId: string;
   durationMs: number;
   version: string;
 }
 
-export class Lock {
+export class Lease {
   locker: Locker;
 
   leaseId: string;
@@ -45,7 +45,7 @@ export class Lock {
     leaseDurationMs, 
     heartbeatMs, 
     maxRetryCount,
-  }: LockOptionsWithLocker) {
+  }: LeaseOptionsWithLocker) {
     this.locker = locker;
 
     this.leaseId = leaseId;
@@ -67,7 +67,7 @@ export class Lock {
    */
   async acquire(): Promise<void> {
     if (this.isAcquired) {
-      throw new LockNotGrantedError(`${this.leaseId} already acquired`);   
+      throw new LeaseNotGrantedError(`${this.leaseId} already acquired`);   
     }
 
     for (let attempt = 0; attempt < this.maxRetryCount; attempt++) {
@@ -85,7 +85,7 @@ export class Lock {
       }
     }
 
-    throw new LockNotGrantedError(`${this.leaseId} could not be acquired after ${this.maxRetryCount} attempts`);
+    throw new LeaseNotGrantedError(`${this.leaseId} could not be acquired after ${this.maxRetryCount} attempts`);
   }
 
   async release(): Promise<void> {
@@ -177,7 +177,7 @@ export class Lock {
       this.version = undefined;
 
       if (err instanceof ConditionalCheckFailedException) {
-        debug(`Lock acquisition failed because lease for ${this.leaseId} already exists`);
+        debug(`Lease acquisition failed because lease for ${this.leaseId} already exists`);
         return false;
       } else {
         throw err;
@@ -185,7 +185,7 @@ export class Lock {
     }
   }
 
-  private async fetchLease(): Promise<LockItem | undefined> {
+  private async fetchLease(): Promise<LeaseItem | undefined> {
     const { Item } = await this.locker.ddbDocClient.send(
       new GetCommand({
         TableName: this.locker.tableName,

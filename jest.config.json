@@ -22,8 +22,9 @@
   "transformIgnorePatterns": [],
   "transform": {
     "^.+\\.tsx?$": [
-      "ts-jest",
+      "esbuild-jest",
       {
+        "sourcemap": true
       }
     ]
   },

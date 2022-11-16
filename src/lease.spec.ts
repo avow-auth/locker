@@ -1,53 +1,53 @@
 import { nanoid } from "nanoid";
 import { setTimeout as delay } from "timers/promises";
-import { LockNotGrantedError } from "./errors";
-import { DEFAULT_RETRY_COUNT, Lock } from "./lock";
+import { LeaseNotGrantedError } from "./errors";
+import { DEFAULT_RETRY_COUNT, Lease } from "./lease";
 import { locker, testLocker } from "./locker.jest";
 
-describe("Lock", () => {
+describe("Lease", () => {
   describe("constructor", () => {
     describe("maxRetryCount", () => {
       it("should be DEFAULT_RETRY_COUNT if not specified", () => {
-        const lock = new Lock("test", { locker, leaseDurationMs: 500 });
-        expect(lock.maxRetryCount).toEqual(DEFAULT_RETRY_COUNT);
+        const lease = new Lease("test", { locker, leaseDurationMs: 500 });
+        expect(lease.maxRetryCount).toEqual(DEFAULT_RETRY_COUNT);
       });
 
       it("should be specified value", () => {
-        const lock = new Lock("test", { maxRetryCount: 1001, locker, leaseDurationMs: 500 });
-        expect(lock.maxRetryCount).toEqual(1001);
+        const lease = new Lease("test", { maxRetryCount: 1001, locker, leaseDurationMs: 500 });
+        expect(lease.maxRetryCount).toEqual(1001);
       });
     });
 
     describe("leaseKey", () => {
-      const lock = new Lock("lease-id", { locker, leaseDurationMs: 500 });
+      const lease = new Lease("lease-id", { locker, leaseDurationMs: 500 });
 
       it("partition key should include prefix", () => {
-        expect(lock.leaseKey.pk).toEqual(locker.partitionKeyPrefix + "lease-id");
+        expect(lease.leaseKey.pk).toEqual(locker.partitionKeyPrefix + "lease-id");
       });
 
       it("sort key should be * if required", () => {
-        expect(lock.leaseKey.sk).toEqual("*");
+        expect(lease.leaseKey.sk).toEqual("*");
       });
     });
   });
 
   describe("acquire()", () => {
     it("should acquire a lock if not acquired by anything else", async () => {
-      const lock = new Lock(nanoid(), { locker, leaseDurationMs: 500 });
-      await lock.acquire();
-      expect(lock.isAcquired).toBeTruthy();
-      expect(lock.version).not.toBeUndefined();
+      const lease = new Lease(nanoid(), { locker, leaseDurationMs: 500 });
+      await lease.acquire();
+      expect(lease.isAcquired).toBeTruthy();
+      expect(lease.version).not.toBeUndefined();
     });
 
     it("should throw error if already acquired", async () => {
-      const lock = new Lock(nanoid(), { locker, leaseDurationMs: 500 });
-      await lock.acquire();
+      const lease = new Lease(nanoid(), { locker, leaseDurationMs: 500 });
+      await lease.acquire();
 
-      expect(lock.isAcquired).toBeTruthy();
+      expect(lease.isAcquired).toBeTruthy();
 
       await expect(async () => {
-        await lock.acquire();
-      }).rejects.toThrow(LockNotGrantedError);
+        await lease.acquire();
+      }).rejects.toThrow(LeaseNotGrantedError);
     });
 
     it("should acquire lease after multiple attempts if previous owner relases", async () => {
@@ -55,30 +55,30 @@ describe("Lock", () => {
       const leaseDurationMs = 500;
 
       const otherLocker = testLocker();
-      const otherLock = new Lock(leaseId, {
+      const otherLease = new Lease(leaseId, {
         locker: otherLocker,
         leaseDurationMs,
         heartbeatMs: leaseDurationMs / 3, // keep renewing so future lock attempt will fail
       });
-      await otherLock.acquire();
-      expect(otherLock.isAcquired).toBeTruthy();
+      await otherLease.acquire();
+      expect(otherLease.isAcquired).toBeTruthy();
 
       // release after leaseDuration * 2
       setTimeout(async () => {
-        await otherLock.release();
+        await otherLease.release();
       }, leaseDurationMs * 2);
 
-      const lock = new Lock(leaseId, {
+      const lease = new Lease(leaseId, {
         locker,
         leaseDurationMs,
         maxRetryCount: 30,
       });
 
       const startTime = Date.now();
-      await lock.acquire();
+      await lease.acquire();
       const attemptDuration = Date.now() - startTime;
 
-      expect(lock.isAcquired).toBeTruthy();
+      expect(lease.isAcquired).toBeTruthy();
       expect(attemptDuration).toBeGreaterThan(leaseDurationMs * 2 - 1);
     });
 
@@ -87,15 +87,15 @@ describe("Lock", () => {
       const leaseDurationMs = 200;
 
       const otherLocker = testLocker();
-      const otherLock = new Lock(leaseId, { 
+      const otherLease = new Lease(leaseId, { 
         locker: otherLocker, 
         leaseDurationMs, 
         heartbeatMs: leaseDurationMs / 3, // keep renewing so future lock attempt will fail
       });
-      await otherLock.acquire();
-      expect(otherLock.isAcquired).toBeTruthy();
+      await otherLease.acquire();
+      expect(otherLease.isAcquired).toBeTruthy();
 
-      const lock = new Lock(leaseId, { 
+      const lease = new Lease(leaseId, { 
         locker, 
         leaseDurationMs, 
         maxRetryCount: 3,
@@ -103,74 +103,74 @@ describe("Lock", () => {
 
       const startTime = Date.now();
       await expect(async () => {
-        await lock.acquire();
+        await lease.acquire();
       }).rejects.toThrow(/could not be acquired after 3 attempts/);
       const attemptDuration = Date.now() - startTime;
       expect(attemptDuration).toBeGreaterThan(leaseDurationMs * 3 - 1);
 
-      await otherLock.release();
+      await otherLease.release();
 
-      expect(lock.isAcquired).toBeFalsy();
+      expect(lease.isAcquired).toBeFalsy();
     });
   });
 
   describe("release()", () => {
     it("should release an existing lease", async () => {
       const leaseId = nanoid();
-      const lock = new Lock(leaseId, { locker, leaseDurationMs: 5000 });
-      await lock.acquire();
-      expect(lock.isAcquired).toBeTruthy();
+      const lease = new Lease(leaseId, { locker, leaseDurationMs: 5000 });
+      await lease.acquire();
+      expect(lease.isAcquired).toBeTruthy();
 
-      const rawLease = await lock['fetchLease']();
+      const rawLease = await lease['fetchLease']();
       expect(rawLease?.leaseId).toEqual(leaseId);
       
-      await lock.release();
-      expect(lock.isAcquired).toBeFalsy();
-      expect(lock.version).toBeUndefined();
-      const noLease = await lock['fetchLease']();
+      await lease.release();
+      expect(lease.isAcquired).toBeFalsy();
+      expect(lease.version).toBeUndefined();
+      const noLease = await lease['fetchLease']();
       expect(noLease).toBeUndefined();
     });
 
     it("should silently fail if no lease", async () => {
       const leaseId = nanoid();
-      const lock = new Lock(leaseId, { locker, leaseDurationMs: 5000 });
-      await lock.acquire();
-      expect(lock.isAcquired).toBeTruthy();
+      const lease = new Lease(leaseId, { locker, leaseDurationMs: 5000 });
+      await lease.acquire();
+      expect(lease.isAcquired).toBeTruthy();
       
 
-      await lock.release();
-      await lock.release();
+      await lease.release();
+      await lease.release();
     });
   });
 
   describe("private scheduleHeartbeat()", () => {
     it("shouldn't heartbeat if no heartbeatMs", async () => {
-      const lock = new Lock(nanoid(), { locker, leaseDurationMs: 5000 });
-      await lock.acquire();
-      expect(lock.heartbeatTimer).toBeUndefined();
+      const lease = new Lease(nanoid(), { locker, leaseDurationMs: 5000 });
+      await lease.acquire();
+      expect(lease.heartbeatTimer).toBeUndefined();
       await delay(100);
 
-      const upsertLease = jest.spyOn(lock as any, "upsertLease");
+      const upsertLease = jest.spyOn(lease as any, "upsertLease");
       expect(upsertLease).not.toHaveBeenCalled();
     });
 
     it("should call hearbeat every heartbeatMs until released", async () => {
-      const lock = new Lock(nanoid(), { 
+      const lease = new Lease(nanoid(), { 
         locker, 
         leaseDurationMs: 5000,
         heartbeatMs: 100,
       });
 
-      await lock.acquire();
-      const oldVersion = lock.version;
+      await lease.acquire();
+      const oldVersion = lease.version;
 
-      const upsertLease = jest.spyOn(lock as any, "upsertLease");
+      const upsertLease = jest.spyOn(lease as any, "upsertLease");
       await delay(100 * 2 + 1);
-      await lock.release();
-      expect(lock.heartbeatTimer).toBeUndefined();
+      await lease.release();
+      expect(lease.heartbeatTimer).toBeUndefined();
 
       expect(upsertLease).toHaveBeenCalled();
-      expect(lock.version).not.toEqual(oldVersion);
+      expect(lease.version).not.toEqual(oldVersion);
     });
   });
 });

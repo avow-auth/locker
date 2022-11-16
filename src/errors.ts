@@ -6,4 +6,4 @@ export class LockerError extends Error {
   }
 }
 
-export class LockNotGrantedError extends LockerError { };
+export class LeaseNotGrantedError extends LockerError { };
